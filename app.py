@@ -5,6 +5,7 @@ from typing import Optional
 import os
 import dotenv
 from chainlit.input_widget import Select, Switch, Slider, TextInput
+import AIManager
 
 dotenv.load_dotenv()
 
@@ -33,6 +34,7 @@ class Character:
         desc = SQLiteManager.fetch_one("SELECT description FROM characters WHERE name = ?", (name,))
         self.description = desc["description"] if desc else "Pas de description disponible."
         self.comprehension = ComprehensionLevel.LOW
+        self.ai_manager = AIManager.AIManager(self.description, notion)
         
     def set_comprehension(self, comprehension):
         if comprehension not in comprehension_dict.keys():
@@ -49,9 +51,11 @@ class Character:
         return "Je ne sais pas comment interpréter cela."
 
     async def respond(self, message):
-        response = f"{self.name}: {message}.\n{self.interpret_comprehension()}"
+        response = f"{self.name}: {self.ai_manager.get_response(message)}"
+        self.set_comprehension(response["understanding"])
+        text = response["comment"]
         await cl.Message(
-            content=response, author=self.name.lower()
+            content=text, author=self.name.lower()
         ).send()
         
 characters = [Character("Kadoc"), Character("Karadoc"), Character("Perceval")]
@@ -102,6 +106,8 @@ async def start_chat():
 async def setup_agent(settings):
     global notion
     notion = settings["notion"]
+    for character in characters:
+        character.ai_manager.set_subject(notion)
 
 @cl.on_message
 async def handle_message(message):
