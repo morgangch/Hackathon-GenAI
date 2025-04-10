@@ -52,7 +52,7 @@ async def start_chat():
     app_user = cl.user_session.get("user")
     await cl.Message(f"Hello {app_user.identifier}").send()
     for character in characters:
-        await cl.Message(f"{character.name} has joined the chat.").send()
+        await profil_manager(character.name)
 
 @cl.on_message
 async def handle_message(message):
@@ -63,7 +63,7 @@ async def handle_message(message):
 
 async def generate_responses(message):
     for character in characters:
-        await cl.Message(f"{character.name} is thinking...").send()
+        await cl.Message(content=f"{character.name} is thinking...", author=character.name.lower()).send()
         await cl.sleep(1)  # Simulate thinking time
 
 @cl.on_chat_resume
@@ -71,3 +71,6 @@ async def resume_chat():
     for character in characters:
         await cl.Message(f"{character.name} has resumed the chat.").send()
         await cl.Message(f"{character.name}'s comprehension level is {character.comprehension.name}.").send()
+
+async def profil_manager(name):
+    await cl.Message(content=f"{name} has joined the chat.", author=name.lower()).send()

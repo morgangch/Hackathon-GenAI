@@ -6,7 +6,7 @@ Un projet **éducatif**, **innovant** et **hilarant** né lors d’un hackathon.
 ## 🎯 Objectif du projet
 
 L'objectif de ce projet est de créer une IA éducative qui n’a **pas pour but de répondre à une question**, mais de **vous aider à savoir si vous avez, vous, compris une notion**.  
-Comment ? Grâce à 3 agents qui "essayent" de comprendre avec vous.
+Comment ? Grâce à 3 agents qui "essayent" de comprendre vos explication.
 
 💡 Si **aucun** ne comprend → vous n'avez sûrement **rien compris non plus**.  
 💡 Si **Perceval** commence à piger → vous êtes sur la bonne voie.  
