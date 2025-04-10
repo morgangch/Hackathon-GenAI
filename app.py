@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional
 import os
 import dotenv
+from chainlit.input_widget import Select, Switch, Slider
 
 dotenv.load_dotenv()
 
@@ -47,12 +48,46 @@ def auth_callback(username: str, password: str):
     else:
         return None
 
+@cl.set_chat_profiles
+async def chat_profile():
+    return [
+        cl.ChatProfile(
+            name="GPT-3.5",
+            markdown_description="The underlying LLM model is **GPT-3.5**.",
+            icon="https://picsum.photos/200",
+        ),
+        cl.ChatProfile(
+            name="GPT-4",
+            markdown_description="The underlying LLM model is **GPT-4**.",
+            icon="https://picsum.photos/250",
+        ),
+    ]
+
 @cl.on_chat_start
 async def start_chat():
     app_user = cl.user_session.get("user")
     await cl.Message(f"Hello {app_user.identifier}").send()
-    for character in characters:
-        await profil_manager(character.name)
+    chat_profile = cl.user_session.get("chat_profile")
+    await cl.Message(
+        content=f"starting chat using the {chat_profile} chat profile"
+    ).send()
+    settings = await cl.ChatSettings(
+        [
+            Slider(
+                id="profile",
+                label="numbre of profile (comming soon)",
+                initial=3,
+                min=1,
+                max=10,
+                step=1,
+            ),
+        ]
+    ).send()
+
+@cl.on_settings_update
+async def setup_agent(settings):
+    print("on_settings_update", settings)
+    print(f"profile = {settings["profile"]}")
 
 @cl.on_message
 async def handle_message(message):
