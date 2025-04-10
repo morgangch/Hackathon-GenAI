@@ -1,15 +1,18 @@
 import chainlit as cl
 
-class Agent:
+class Characters:
     def __init__(self, name):
         self.name = name
 
     def respond(self, message):
         return f"{self.name} says: {message.content}"
+    
+characters = [Characters("Kadoc"), Characters("Karadoc"), Characters("Perceval")]
 
 @cl.on_chat_start
 async def start_chat():
-    await cl.Message("Welcome to the chat! Please enter your message below.").send()
+    for character in characters:
+        await cl.Message(f"{character.name} has joined the chat.").send()
 
 @cl.on_message
 async def handle_message(message):
@@ -19,8 +22,7 @@ async def handle_message(message):
         await cl.Message("Please enter a valid message.").send()
 
 async def generate_responses(message):
-    # Simulate generating responses
-    agents = [Agent("Agent 1"), Agent("Agent 2")]
-    for agent in agents:
-        await cl.Message(f"{agent.name} is thinking...").send()
+    for character in characters:
+        await cl.Message(f"{character.name} is thinking...").send()
         await cl.sleep(1)  # Simulate thinking time
+
