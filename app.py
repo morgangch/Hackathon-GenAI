@@ -4,7 +4,7 @@ from enum import Enum
 from typing import Optional
 import os
 import dotenv
-from chainlit.input_widget import Select, Switch, Slider
+from chainlit.input_widget import Select, Switch, Slider, TextInput
 
 dotenv.load_dotenv()
 
@@ -13,27 +13,47 @@ SQLiteManager.reinitialize_database()
 
 CHAINLIT_AUTH_SECRET = os.getenv("CHAINLIT_AUTH_SECRET")
 
-class enum(Enum):
+notion = "la relativité restreinte"
+
+class ComprehensionLevel(Enum):
     LOW = 1
     MEDIUM = 2
     HIGH = 3
 
-class Characters:
+
+comprehension_dict = {
+        "low": ComprehensionLevel.LOW,
+        "medium": ComprehensionLevel.MEDIUM,
+        "high": ComprehensionLevel.HIGH
+    }
+
+class Character:
     def __init__(self, name):
         self.name = name
-        self.description = SQLiteManager.fetch_one("SELECT description FROM characters WHERE name = ?", (name,))
-        self.comprehension = enum.LOW
+        desc = SQLiteManager.fetch_one("SELECT description FROM characters WHERE name = ?", (name,))
+        self.description = desc["description"] if desc else "Pas de description disponible."
+        self.comprehension = ComprehensionLevel.LOW
         
     def set_comprehension(self, comprehension):
-        comprehension_dict = { "low": enum.LOW, "medium": enum.MEDIUM, "high": enum.HIGH }
         if comprehension not in comprehension_dict.keys():
             return
         self.comprehension = comprehension_dict[comprehension]
+        
+    def interpret_comprehension(self):
+        if self.comprehension == ComprehensionLevel.LOW:
+            return "Je ne comprends pas très bien."
+        elif self.comprehension == ComprehensionLevel.MEDIUM:
+            return "Je comprends un peu."
+        elif self.comprehension == ComprehensionLevel.HIGH:
+            return "Je comprends parfaitement."
+        return "Je ne sais pas comment interpréter cela."
 
     async def respond(self, message):
-        reponse = {"response": "Je suis un personnage fictif.", "comprehension": self.comprehension}
+        await cl.Message(
+            content=f"{self.name}: {message}.\n{self.interpret_comprehension()}", author=self.name.lower()
+        ).send()
         
-characters = [Characters("Kadoc"), Characters("Karadoc"), Characters("Perceval")]
+characters = [Character("Kadoc"), Character("Karadoc"), Character("Perceval")]
 
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
@@ -48,21 +68,6 @@ def auth_callback(username: str, password: str):
     else:
         return None
 
-@cl.set_chat_profiles
-async def chat_profile():
-    return [
-        cl.ChatProfile(
-            name="GPT-3.5",
-            markdown_description="The underlying LLM model is **GPT-3.5**.",
-            icon="https://picsum.photos/200",
-        ),
-        cl.ChatProfile(
-            name="GPT-4",
-            markdown_description="The underlying LLM model is **GPT-4**.",
-            icon="https://picsum.photos/250",
-        ),
-    ]
-
 @cl.on_chat_start
 async def start_chat():
     app_user = cl.user_session.get("user")
@@ -73,9 +78,17 @@ async def start_chat():
     ).send()
     settings = await cl.ChatSettings(
         [
+            TextInput(
+                id="notion",
+                label="La notion à travailler",
+                placeholder=f"Entrez la notion ici, ex: {notion}",
+                initial="",
+                max_length=100,
+                required=True,
+            ),
             Slider(
-                id="profile",
-                label="numbre of profile (comming soon)",
+                id="profile_number",
+                label="nombre of profile (comming soon)",
                 initial=3,
                 min=1,
                 max=10,
@@ -86,8 +99,8 @@ async def start_chat():
 
 @cl.on_settings_update
 async def setup_agent(settings):
-    print("on_settings_update", settings)
-    print(f"profile = {settings["profile"]}")
+    global notion
+    notion = settings["notion"]
 
 @cl.on_message
 async def handle_message(message):
@@ -98,7 +111,7 @@ async def handle_message(message):
 
 async def generate_responses(message):
     for character in characters:
-        await cl.Message(content=f"{character.name} is thinking...", author=character.name.lower()).send()
+        await character.respond(f"{character.name} is thinking about {notion}...")
         await cl.sleep(1)  # Simulate thinking time
 
 @cl.on_chat_resume
@@ -106,6 +119,3 @@ async def resume_chat():
     for character in characters:
         await cl.Message(f"{character.name} has resumed the chat.").send()
         await cl.Message(f"{character.name}'s comprehension level is {character.comprehension.name}.").send()
-
-async def profil_manager(name):
-    await cl.Message(content=f"{name} has joined the chat.", author=name.lower()).send()
