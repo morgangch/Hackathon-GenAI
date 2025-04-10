@@ -1,4 +1,4 @@
-import chainlit as cl
+import chainlit as cl 
 
 class Characters:
     def __init__(self, name):
@@ -9,10 +9,11 @@ class Characters:
     
 characters = [Characters("Kadoc"), Characters("Karadoc"), Characters("Perceval")]
 
+
 @cl.on_chat_start
 async def start_chat():
     for character in characters:
-        await cl.Message(f"{character.name} has joined the chat.").send()
+        await profil_manager(character.name)
 
 @cl.on_message
 async def handle_message(message):
@@ -23,6 +24,8 @@ async def handle_message(message):
 
 async def generate_responses(message):
     for character in characters:
-        await cl.Message(f"{character.name} is thinking...").send()
+        await cl.Message(content=f"{character.name} is thinking...", author=character.name.lower()).send()
         await cl.sleep(1)  # Simulate thinking time
 
+async def profil_manager(name):
+    await cl.Message(content=f"{name} has joined the chat.", author=name.lower()).send()
