@@ -1,1 +1,3 @@
-chainlit
+chainlit==2.4.400 
+uvicorn==0.34.0
+websockets==11.0.3
