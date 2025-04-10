@@ -10,8 +10,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 class AIManager:
-    def __init__(self, personality, subject):
-        self.ai_personality = personality
+    def __init__(self, personality, subject = '''aucun sujet'''):
         self.messages = [{
                     "role": "system",
                     "content": '''Voici le sujet que l'utilisateur veut t'expliquer: ''' + dedent(subject)
@@ -59,7 +58,10 @@ class AIManager:
                 "strict": True
             }
         }
-    
+
+    def set_subject(self, subject):
+        self.messages[0]["content"] = '''Voici le sujet que l'utilisateur veut t'expliquer: ''' + dedent(subject)
+
     def get_response(self, explanation):
         self.messages.append({
             "role": "user",
