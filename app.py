@@ -49,8 +49,9 @@ class Character:
         return "Je ne sais pas comment interpréter cela."
 
     async def respond(self, message):
+        response = f"{self.name}: {message}.\n{self.interpret_comprehension()}"
         await cl.Message(
-            content=f"{self.name}: {message}.\n{self.interpret_comprehension()}", author=self.name.lower()
+            content=response, author=self.name.lower()
         ).send()
         
 characters = [Character("Kadoc"), Character("Karadoc"), Character("Perceval")]
