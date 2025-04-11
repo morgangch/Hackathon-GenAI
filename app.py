@@ -81,15 +81,15 @@ comprehension_dict = {
 
 voices_dict = {
     "Kadoc": {
-        "id": "FNOttooGMYDRXmqkQ0Fz",
+        "id": "CnoCC95oXZRnVASfvCgY",
         "description": "Voix de Kadoc, le personnage comique et un peu simplet."
     },
     "Karadoc": {
-        "id": "FNOttooGMYDRXmqkQ0Fz",
+        "id": "VGuVekRIGDHgUTilO7UI",
         "description": "Voix de Karadoc, le personnage détendu et philosophe."
     },
     "Perceval": {
-        "id": "FNOttooGMYDRXmqkQ0Fz",
+        "id": "Bygzdfyltfher6EpbPSD",
         "description": "Voix de Perceval, le personnage naïf et maladroit."
     }
 }
@@ -113,7 +113,7 @@ class Character:
         
     def interpret_comprehension(self):
         if self.comprehension == ComprehensionLevel.LOW:
-            if self.name in ["Perceval", "Karadoc"] and random.randint(0, 4) == 0:
+            if self.name in ["Perceval", "Karadoc"] and random.randint(0, 4) == 1:
                 print("C'est pas faux")
                 return "C'est pas faux"
             print("Je ne comprends pas.")
