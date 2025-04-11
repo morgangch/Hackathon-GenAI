@@ -89,7 +89,7 @@ voices_dict = {
         "description": "Voix de Karadoc, le personnage détendu et philosophe."
     },
     "Perceval": {
-        "id": "Bygzdfyltfher6EpbPSD",
+        "id": "DEhqWdvuiT5e21QUephD",
         "description": "Voix de Perceval, le personnage naïf et maladroit."
     }
 }
@@ -257,6 +257,8 @@ async def setup_agent(settings):
 @cl.on_message
 async def handle_message(message):
     if message:
+        global global_note
+        global_note = 0.0
         await generate_responses(message)
         await cl.Message(f"Note globale: {global_note}/3").send()
     else:
