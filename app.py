@@ -9,6 +9,12 @@ import AIManager
 import json
 from textwrap import dedent
 import random
+import httpx
+import io
+import numpy as np
+import audioop
+import asyncio
+import wave
 
 dotenv.load_dotenv()
 
@@ -16,6 +22,14 @@ SQLiteManager = sqliteManager.SQLiteManager("characters.db")
 SQLiteManager.reinitialize_database()
 
 CHAINLIT_AUTH_SECRET = os.getenv("CHAINLIT_AUTH_SECRET")
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+
+
+# Define a threshold for detecting silence and a timeout for ending a turn
+SILENCE_THRESHOLD = (
+    3500  # Adjust based on your audio level (e.g., lower for quieter audio)
+)
+SILENCE_TIMEOUT = 1300.0  # Seconds of silence to consider the turn finished
 
 notion = "la relativité restreinte"
 global_note = 0.0
@@ -38,7 +52,7 @@ Tu dis souvent des choses comme :
 
 Tu es attachant, drôle malgré toi, et ta logique est… unique.
 
-Pour que tu comprend **il faut te parler comme a un enfant de 12ans**
+Pour que tu comprennes **il faut te parler comme a un enfant de 12ans**
 Tu ne comprend pas les mots complexes'''
     },
     "Karadoc": {
@@ -65,6 +79,21 @@ comprehension_dict = {
         "high": ComprehensionLevel.HIGH
     }
 
+voices_dict = {
+    "Kadoc": {
+        "id": "FNOttooGMYDRXmqkQ0Fz",
+        "description": "Voix de Kadoc, le personnage comique et un peu simplet."
+    },
+    "Karadoc": {
+        "id": "FNOttooGMYDRXmqkQ0Fz",
+        "description": "Voix de Karadoc, le personnage détendu et philosophe."
+    },
+    "Perceval": {
+        "id": "FNOttooGMYDRXmqkQ0Fz",
+        "description": "Voix de Perceval, le personnage naïf et maladroit."
+    }
+}
+
 class Character:
     def __init__(self, name):
         self.name = name
@@ -73,6 +102,8 @@ class Character:
         self.description = characters[name]["description"]
         self.comprehension = ComprehensionLevel.LOW
         self.ai_manager = AIManager.AIManager(self.description, notion)
+        self.last_message = None
+        self.voice = voices_dict[name]["id"]
         print(f"Character {self.name} initialized with description: {self.description}")
         
     def set_comprehension(self, comprehension):
@@ -118,15 +149,64 @@ class Character:
             text = f"{self.name}: {response} (KEYERROR)"
         except TypeError:
             text = f"{self.name}: {response} (TYPEERROR)"
+        self.last_message = text
         global global_note
         note = self.get_note()
         global_note += note
-        text += f" (comprehension: {self.interpret_comprehension()}. Note: {note})"
-        await cl.Message(
-            content=text , author=self.name.lower()
-        ).send()
+        await send_with_audio(text, self.name.lower(), self.voice, f" (comprehension: {self.interpret_comprehension()}. Note: {note})")
         
 characters = [Character("Kadoc"), Character("Karadoc"), Character("Perceval")]
+
+async def send_with_audio(text: str, author: str, voice: str, text_ending: str = ""):
+    mime_type = "audio/mpeg"  # ou "audio/wav" si tu préfères
+    try:
+        filename, audio_data = await text_to_speech(text, mime_type, voice)
+        await cl.Message(
+            content=text + text_ending,
+            author=author,
+            elements=[cl.Audio(name=filename, content=audio_data, mime=mime_type)],
+        ).send()
+    except Exception as e:
+        await cl.Message(content=f"{text} (TTS ERROR: {e})", author=author).send()
+
+@cl.step(type="tool")
+async def text_to_speech(text: str, mime_type: str, voice: str):
+    CHUNK_SIZE = 1024
+
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice}"
+
+    headers = {
+        "Accept": mime_type,
+        "Content-Type": "application/json",
+        "xi-api-key": ELEVENLABS_API_KEY,
+    }
+
+    data = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2",
+        "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
+    }
+
+    async with httpx.AsyncClient(timeout=25.0) as client:
+        response = await client.post(url, json=data, headers=headers)
+        response.raise_for_status()  # Ensure we notice bad responses
+
+        buffer = io.BytesIO()
+        buffer.name = f"output_audio.{mime_type.split('/')[1]}"
+
+        async for chunk in response.aiter_bytes(chunk_size=CHUNK_SIZE):
+            if chunk:
+                buffer.write(chunk)
+
+        buffer.seek(0)
+        return buffer.name, buffer.read()
+
+@cl.on_audio_start
+async def on_audio_start():
+    cl.user_session.set("silent_duration_ms", 0)
+    cl.user_session.set("is_speaking", False)
+    cl.user_session.set("audio_chunks", [])
+    return True
 
 @cl.password_auth_callback
 def auth_callback(username: str, password: str):
